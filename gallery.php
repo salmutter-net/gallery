@@ -121,17 +121,20 @@ class plgContentGallery extends JPlugin {
     }
 
     function renderGallery($type, &$object, $images, $galleryPath) {
-        if (!class_exists('ImgResizeCache')) {
-            echo '<strong>'.JText::_('Das Image Resize Cache Plugin wurde nicht korrekt eingebunden.').'</strong>';
-            return NULL;
+        $imageTransformer = false;
+        if (class_exists('Imagetransformer')) {
+            $imageTransformer = 'Imagetransformer';
         }
-        $resizer = new ImgResizeCache();
+        if (class_exists('ImgResizeCache')) {
+            $imageTransformer = 'ImgResizeCache';
+            $resizer = new ImgResizeCache();
+        }
         if (empty($type) || empty($object) || empty($images) || empty($galleryPath)) {
             echo '<strong>'.JText::_('Essentielle Variable nicht übergeben!').'</strong>';
             return NULL;
         }
         $html = '';
-        if ($_SESSION['gallerycountarticles'] == 0) {
+        if ($_SESSION['gallerycountarticles'] === 0) {
             // Include once the DOM nodes needed for gallery from external file and add the to the $html-array
             ob_start();
             include __DIR__ . '/plugin_gallery/photoSwipe-Dom.php';
@@ -170,7 +173,20 @@ class plgContentGallery extends JPlugin {
                            var pswpElement = document.querySelectorAll(".pswp")[0];
                            var items = [';
             foreach ($images as $key => $image) {
-                $largeImgSrc = htmlspecialchars($resizer->resize($image, array('w' => 1280, 'h' => 853, 'crop' => false, 'canvas-color' => '#000')));
+                if ($imageTransformer === 'Imagetransformer') {
+                    $largeImgSrc = Imagetransformer::generateUrl($image, [
+                        'w' => 1280,
+                        'h' => 853,
+                        'fit' => 'contain',
+                        'q' => 70,
+                        'bg' => '#000',
+                        'fm' => 'webp'
+                    ]);
+                } else if ($imageTransformer === 'ImgResizeCache') {
+                    $largeImgSrc = htmlspecialchars( $resizer->resize( $image, array( 'w' => 1280, 'h' => 853, 'crop' => false, 'canvas-color' => '#000' ) ) );
+                } else {
+                    $largeImgSrc = $image;
+                }
                 $imageSizeArray = getimagesize($largeImgSrc);
                 $html .= '
                            {
@@ -187,7 +203,7 @@ class plgContentGallery extends JPlugin {
 
                           var gallery = new PhotoSwipe( pswpElement, PhotoSwipeUI_Default, items, options);
                           //gallery.init();
-                          
+
                           initPhotoSwipeFromDOM(".gallery-wrapper");
 
                         } );
@@ -197,10 +213,36 @@ class plgContentGallery extends JPlugin {
         // Generate the image thumbnail-list
         $html .= '<div class="gallery-wrapper" itemscope itemtype="http://schema.org/ImageGallery">';
         foreach ($images as $key => $image) {
-            $largeImgSrc = htmlspecialchars($resizer->resize($image, array('w' => 1280, 'h' => 853, 'crop' => false, 'canvas-color' => '#000')));
+            if ($imageTransformer === 'Imagetransformer') {
+                $largeImgSrc = Imagetransformer::generateUrl($image, [
+                'w' => 1280,
+                'h' => 853,
+                'fit' => 'contain',
+                'q' => 70,
+                'bg' => '#000',
+                'fm' => 'webp'
+                ]);
+            } else if ($imageTransformer === 'ImgResizeCache') {
+                $largeImgSrc = htmlspecialchars( $resizer->resize( $image, array( 'w' => 1280, 'h' => 853, 'crop' => false, 'canvas-color' => '#000' ) ) );
+            } else {
+                $largeImgSrc = $image;
+            }
             $imageSizeArray = getimagesize($largeImgSrc);
-            $smallImgSrc = htmlspecialchars($resizer->resize($image, array('w' => 197, 'h' => 132, 'crop' => false, 'canvas-color' => '#fff')));
-            $html .= ' <figure class="gallery-thumbnail" itemprop="associatedMedia" itemscope itemtype="http://schema.org/ImageObject">';
+            if ($imageTransformer === 'Imagetransformer') {
+                $smallImgSrc = Imagetransformer::generateUrl($image, [
+                'w' => 197,
+                'h' => 132,
+                'fit' => 'contain',
+                'q' => 70,
+                'bg' => '#fff',
+                'fm' => 'webp'
+                ]);
+            } else if ($imageTransformer === 'ImgResizeCache') {
+                $smallImgSrc = htmlspecialchars($resizer->resize($image, array('w' => 197, 'h' => 132, 'crop' => false, 'canvas-color' => '#fff')));
+            } else {
+                $smallImgSrc = $image;
+            }
+            $html .= ' <figure class="gallery-thumbnail">';
             $html .= '     <a href="' . $largeImgSrc . '" itemprop="contentUrl" data-size="' . $imageSizeArray[0] . 'x' . $imageSizeArray[1] . '">';
             $html .= '         <img class="gallery-thumbnail-image" src="' . $smallImgSrc .'" />';
             $html .= '     </a>';
