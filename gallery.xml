@@ -14,10 +14,6 @@
         <filename plugin="gallery">index.html</filename>
         <folder plugin="gallery">plugin_gallery</folder>
     </files>
-    <languages>
-        <language tag="de-DE">language/de-DE/de-DE.plg_content_gallery.ini</language>
-        <language tag="de-DE">language/de-DE/de-DE.plg_content_gallery.sys.ini</language>
-    </languages>
     <config>
     </config>
 </extension>
