@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<extension type="plugin" version="3.0" group="content" method="upgrade">
+    <name>Gallery Content Plugin with PhotoSwipe</name>
+    <version>0.9</version>
+    <creationDate>2015.04.03</creationDate>
+    <license>GNU General Public License version 2 or later; see LICENSE.txt</license>
+    <copyright>Copyright 2015 salmutter.net – DI Philipp Salmutter. All rights reserved.</copyright>
+    <author>Philipp Salmutter</author>
+    <authorEmail>philipp@slamutter.net</authorEmail>
+    <authorUrl>https://salmutter.net/</authorUrl>
+    <description>Zeigt Bilder in einem definierbaren Ordner als kleine Vorschaubilder im Body-Text an. Mit Klick auf ein Bild, öffnet sich eine PhotoSwipe Galerie. {gallery}ordner{/gallery}</description>
+    <files>
+        <filename plugin="gallery">gallery.php</filename>
+        <filename plugin="gallery">index.html</filename>
+        <folder plugin="gallery">plugin_gallery</folder>
+    </files>
+    <languages>
+        <language tag="de-DE">language/de-DE/de-DE.plg_content_gallery.ini</language>
+        <language tag="de-DE">language/de-DE/de-DE.plg_content_gallery.sys.ini</language>
+    </languages>
+    <config>
+    </config>
+</extension>
