@@ -8,7 +8,10 @@
  *  @license Commercial
  */
 
+use Joomla\CMS\Plugin\PluginHelper;
 use Joomla\CMS\Version;
+use Joomla\Plugin\System\Imagetransformer\Extension\Imagetransformer;
+use Joomla\Registry\Registry;
 
 defined('_JEXEC') or die('Restricted access');
 
@@ -17,6 +20,7 @@ class plgContentGallery extends JPlugin {
     protected $_live_site;
     protected $_rootfolder;
     protected $_images_dir;
+    public $imageTransformer = false;
 
     public function __construct(&$subject, $config) {
         $app = JFactory::getApplication();
@@ -40,6 +44,12 @@ class plgContentGallery extends JPlugin {
 
         if (isset($_SESSION['gallerycountarticles'])) {
             unset($_SESSION['gallerycountarticles']);
+        }
+
+        if (class_exists(Imagetransformer::class) && JPluginHelper::isEnabled('system', 'imagetransformer')) {
+            $this->imageTransformer = 'Imagetransformer';
+        } else if (class_exists('ImgResizeCache')) {
+            $this->imageTransformer = 'ImgResizeCache';
         }
 
         parent::__construct($subject, $config);
@@ -92,13 +102,13 @@ class plgContentGallery extends JPlugin {
                 if ($dh = @opendir($this->_absolute_path . $this->_rootfolder . $galleryPath)) {
                     while(($file = readdir($dh)) !== false) {
                         if ( substr(strtolower($file), -3) == 'jpg'
-                            OR substr(strtolower($file), -3) == 'JPG'
-                            OR substr(strtolower($file), -4) == 'jpeg'
-                            OR substr(strtolower($file), -4) == 'JPEG'
-                            OR substr(strtolower($file), -3) == 'gif'
-                            OR substr(strtolower($file), -3) == 'GIF'
-                            OR substr(strtolower($file), -3) == 'png'
-                            OR substr(strtolower($file), -3) == 'PNG'
+                        OR substr(strtolower($file), -3) == 'JPG'
+                        OR substr(strtolower($file), -4) == 'jpeg'
+                        OR substr(strtolower($file), -4) == 'JPEG'
+                        OR substr(strtolower($file), -3) == 'gif'
+                        OR substr(strtolower($file), -3) == 'GIF'
+                        OR substr(strtolower($file), -3) == 'png'
+                        OR substr(strtolower($file), -3) == 'PNG'
                         ) {
                             $images[$file] = 'images/' . $galleryPath . '/' . $file;
                             $imageCount++;
@@ -121,17 +131,17 @@ class plgContentGallery extends JPlugin {
     }
 
     function renderGallery($type, &$object, $images, $galleryPath) {
-        $imageTransformer = false;
-        if (class_exists('Imagetransformer')) {
-            $imageTransformer = 'Imagetransformer';
-        }
-        if (class_exists('ImgResizeCache')) {
-            $imageTransformer = 'ImgResizeCache';
-            $resizer = new ImgResizeCache();
-        }
         if (empty($type) || empty($object) || empty($images) || empty($galleryPath)) {
             echo '<strong>'.JText::_('Essentielle Variable nicht übergeben!').'</strong>';
             return NULL;
+        }
+        if ( $this->imageTransformer === 'Imagetransformer' ) {
+            $plugin = PluginHelper::getPlugin('system', 'imagetransformer');
+            $pluginParams = new Registry($plugin->params);
+            $imageCacheFolder = JPATH_ROOT . DIRECTORY_SEPARATOR . $pluginParams->get('image-cache-folder', 'images-cache');
+        }
+        if ($this->imageTransformer === 'ImgResizeCache') {
+            $resizer = new ImgResizeCache();
         }
         $html = '';
         if ($_SESSION['gallerycountarticles'] === 0) {
@@ -172,31 +182,33 @@ class plgContentGallery extends JPlugin {
                         window.addEventListener("DOMContentLoaded", function() {
                            var pswpElement = document.querySelectorAll(".pswp")[0];
                            var items = [';
-            foreach ($images as $key => $image) {
-                if ($imageTransformer === 'Imagetransformer') {
-                    $largeImgSrc = Imagetransformer::generateUrl($image, [
-                        'w' => 1280,
-                        'h' => 853,
-                        'fit' => 'contain',
-                        'q' => 70,
-                        'bg' => '#000',
-                        'fm' => 'webp'
-                    ]);
-                } else if ($imageTransformer === 'ImgResizeCache') {
-                    $largeImgSrc = htmlspecialchars( $resizer->resize( $image, array( 'w' => 1280, 'h' => 853, 'crop' => false, 'canvas-color' => '#000' ) ) );
-                } else {
-                    $largeImgSrc = $image;
-                }
+        foreach ($images as $key => $image) {
+            if ($this->imageTransformer === 'Imagetransformer') {
+                $largeImgSrc = Imagetransformer::generateUrl($image, [
+                'w' => 1280,
+                'h' => 853,
+                'fit' => 'contain',
+                'q' => 70,
+                'bg' => 'black',
+                'fm' => 'webp'
+                ]);
+                $imageSizeArray = getimagesize(str_replace(' ', "%20", $largeImgSrc));
+            } else if ($this->imageTransformer === 'ImgResizeCache') {
+                $largeImgSrc = htmlspecialchars( $resizer->resize( JPATH_BASE . '/' . $image, array( 'w' => 1280, 'h' => 853, 'crop' => false, 'canvas-color' => '#000' ) ) );
+                $imageSizeArray = getimagesize(JPATH_BASE . '/' . parse_url($largeImgSrc, PHP_URL_PATH));
+            } else {
+                $largeImgSrc = $image;
                 $imageSizeArray = getimagesize($largeImgSrc);
-                $html .= '
+            }
+            $html .= '
                            {
                                src: "' . $largeImgSrc .'",
                                w: "' . $imageSizeArray[0] . '",
                                h: "' . $imageSizeArray[1] . '"
                            }' . $key === count($images)-1 ? ',':'';
-            }
-            unset($image, $largeImgSrc);
-            $html .= '];
+        }
+        unset($image, $largeImgSrc);
+        $html .= '];
                            var options = {
                                index: 0
                            };
@@ -213,38 +225,40 @@ class plgContentGallery extends JPlugin {
         // Generate the image thumbnail-list
         $html .= '<div class="gallery-wrapper" itemscope itemtype="http://schema.org/ImageGallery">';
         foreach ($images as $key => $image) {
-            if ($imageTransformer === 'Imagetransformer') {
+            if ($this->imageTransformer === 'Imagetransformer') {
                 $largeImgSrc = Imagetransformer::generateUrl($image, [
                 'w' => 1280,
                 'h' => 853,
                 'fit' => 'contain',
                 'q' => 70,
-                'bg' => '#000',
+                'bg' => 'black',
                 'fm' => 'webp'
                 ]);
-            } else if ($imageTransformer === 'ImgResizeCache') {
+                $imageSizeArray = getimagesize(str_replace(' ', "%20", $largeImgSrc));
+            } else if ($this->imageTransformer === 'ImgResizeCache') {
                 $largeImgSrc = htmlspecialchars( $resizer->resize( $image, array( 'w' => 1280, 'h' => 853, 'crop' => false, 'canvas-color' => '#000' ) ) );
+                $imageSizeArray = getimagesize(JPATH_BASE . '/' . parse_url($largeImgSrc, PHP_URL_PATH));
             } else {
                 $largeImgSrc = $image;
+                $imageSizeArray = getimagesize($largeImgSrc);
             }
-            $imageSizeArray = getimagesize($largeImgSrc);
-            if ($imageTransformer === 'Imagetransformer') {
+            if ($this->imageTransformer === 'Imagetransformer') {
                 $smallImgSrc = Imagetransformer::generateUrl($image, [
-                'w' => 197,
-                'h' => 132,
+                'w' => 394,
+                'h' => 264,
                 'fit' => 'contain',
                 'q' => 70,
-                'bg' => '#fff',
+                'bg' => 'fff',
                 'fm' => 'webp'
                 ]);
-            } else if ($imageTransformer === 'ImgResizeCache') {
-                $smallImgSrc = htmlspecialchars($resizer->resize($image, array('w' => 197, 'h' => 132, 'crop' => false, 'canvas-color' => '#fff')));
+            } else if ($this->imageTransformer === 'ImgResizeCache') {
+                $smallImgSrc = htmlspecialchars($resizer->resize( $image, array('w' => 197, 'h' => 132, 'crop' => false, 'canvas-color' => '#fff')));
             } else {
                 $smallImgSrc = $image;
             }
             $html .= ' <figure class="gallery-thumbnail">';
             $html .= '     <a href="' . $largeImgSrc . '" itemprop="contentUrl" data-size="' . $imageSizeArray[0] . 'x' . $imageSizeArray[1] . '">';
-            $html .= '         <img class="gallery-thumbnail-image" src="' . $smallImgSrc .'" />';
+            $html .= '         <img class="gallery-thumbnail-image" width="' . $imageSizeArray[0] . '" height="' . $imageSizeArray[1] . '" src="' . $smallImgSrc .'" />';
             $html .= '     </a>';
             $html .= ' </figure>';
         }
