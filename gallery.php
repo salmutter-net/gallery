@@ -180,44 +180,15 @@ class plgContentGallery extends JPlugin {
         // Generate the HTML-script-tag with dynamic images
         $html .= ' <script>
                         window.addEventListener("DOMContentLoaded", function() {
-                           var pswpElement = document.querySelectorAll(".pswp")[0];
-                           var items = [';
-        foreach ($images as $key => $image) {
-            if ($this->imageTransformer === 'Imagetransformer') {
-                $largeImgSrc = Imagetransformer::generateUrl($image, [
-                'w' => 1280,
-                'h' => 853,
-                'fit' => 'contain',
-                'q' => 70,
-                'bg' => 'black',
-                'fm' => 'webp'
-                ]);
-                $imageSizeArray = getimagesize(str_replace(' ', "%20", $largeImgSrc));
-            } else if ($this->imageTransformer === 'ImgResizeCache') {
-                $largeImgSrc = htmlspecialchars( $resizer->resize( JPATH_BASE . '/' . $image, array( 'w' => 1280, 'h' => 853, 'crop' => false, 'canvas-color' => '#000' ) ) );
-                $imageSizeArray = getimagesize(JPATH_BASE . '/' . parse_url($largeImgSrc, PHP_URL_PATH));
-            } else {
-                $largeImgSrc = $image;
-                $imageSizeArray = getimagesize($largeImgSrc);
-            }
-            $html .= '
-                           {
-                               src: "' . $largeImgSrc .'",
-                               w: "' . $imageSizeArray[0] . '",
-                               h: "' . $imageSizeArray[1] . '"
-                           }' . $key === count($images)-1 ? ',':'';
-        }
-        unset($image, $largeImgSrc);
-        $html .= '];
-                           var options = {
-                               index: 0
-                           };
-
-                          var gallery = new PhotoSwipe( pswpElement, PhotoSwipeUI_Default, items, options);
-                          //gallery.init();
-
-                          initPhotoSwipeFromDOM(".gallery-wrapper");
-
+                            var pswpElement = document.querySelectorAll(".pswp")[0];
+                            var items = [];
+                            var options = {
+                                index: 0,
+                                preload: [0,0]
+                            };
+                            var gallery = new PhotoSwipe( pswpElement, PhotoSwipeUI_Default, items, options);
+                            //gallery.init();
+                            initPhotoSwipeFromDOM(".gallery-wrapper");
                         } );
                   </script>
         ';
@@ -227,16 +198,16 @@ class plgContentGallery extends JPlugin {
         foreach ($images as $key => $image) {
             if ($this->imageTransformer === 'Imagetransformer') {
                 $largeImgSrc = Imagetransformer::generateUrl($image, [
-                'w' => 1280,
-                'h' => 853,
-                'fit' => 'contain',
+                'w' => 1660,
+                'h' => 1245,
+                'fit' => 'crop',
                 'q' => 70,
                 'bg' => 'black',
                 'fm' => 'webp'
                 ]);
                 $imageSizeArray = getimagesize(str_replace(' ', "%20", $largeImgSrc));
             } else if ($this->imageTransformer === 'ImgResizeCache') {
-                $largeImgSrc = htmlspecialchars( $resizer->resize( $image, array( 'w' => 1280, 'h' => 853, 'crop' => false, 'canvas-color' => '#000' ) ) );
+                $largeImgSrc = htmlspecialchars( $resizer->resize( $image, array( 'w' => 1660, 'h' => 1245, 'crop' => false, 'canvas-color' => '#000' ) ) );
                 $imageSizeArray = getimagesize(JPATH_BASE . '/' . parse_url($largeImgSrc, PHP_URL_PATH));
             } else {
                 $largeImgSrc = $image;
@@ -245,10 +216,10 @@ class plgContentGallery extends JPlugin {
             if ($this->imageTransformer === 'Imagetransformer') {
                 $smallImgSrc = Imagetransformer::generateUrl($image, [
                 'w' => 394,
-                'h' => 264,
-                'fit' => 'contain',
+                'h' => 295.5,
+                'fit' => 'crop',
                 'q' => 70,
-                'bg' => 'fff',
+                'bg' => 'white',
                 'fm' => 'webp'
                 ]);
             } else if ($this->imageTransformer === 'ImgResizeCache') {
@@ -258,7 +229,7 @@ class plgContentGallery extends JPlugin {
             }
             $html .= ' <figure class="gallery-thumbnail">';
             $html .= '     <a href="' . $largeImgSrc . '" itemprop="contentUrl" data-size="' . $imageSizeArray[0] . 'x' . $imageSizeArray[1] . '">';
-            $html .= '         <img class="gallery-thumbnail-image" width="' . $imageSizeArray[0] . '" height="' . $imageSizeArray[1] . '" src="' . $smallImgSrc .'" />';
+            $html .= '         <img class="gallery-thumbnail-image" loading="lazy" width="' . $imageSizeArray[0] . '" height="' . $imageSizeArray[1] . '" src="' . $smallImgSrc .'" />';
             $html .= '     </a>';
             $html .= ' </figure>';
         }
